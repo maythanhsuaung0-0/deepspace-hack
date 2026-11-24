@@ -5,6 +5,7 @@ import { Seo } from '../../components/Seo'
 import { HackAtlasMap } from '../../components/HackAtlasMap'
 import {
   eventTopics,
+  eventSearchFeedback,
   filterEvents,
   formatDateRange,
   formatEventFormat,
@@ -21,6 +22,7 @@ export default function HackAtlasPage() {
     orderDir: 'asc',
     limit: 100,
   })
+  const [queryDraft, setQueryDraft] = useState('')
   const [query, setQuery] = useState('')
   const [format, setFormat] = useState<EventFormat | typeof ALL>(ALL)
   const [topic, setTopic] = useState(ALL)
@@ -33,6 +35,19 @@ export default function HackAtlasPage() {
   )
   const selected = filtered.find((event) => event.recordId === selectedId) ?? filtered[0]
   const cityCount = new Set(records.filter(({ data }) => data.format !== 'online').map(({ data }) => data.city)).size
+  const searchPending = queryDraft !== query
+  const searchFeedback = eventSearchFeedback({
+    status,
+    pending: searchPending,
+    query,
+    resultCount: filtered.length,
+    totalCount: records.length,
+  })
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setQuery(queryDraft), 300)
+    return () => window.clearTimeout(timer)
+  }, [queryDraft])
 
   useEffect(() => {
     if (selectedId && !filtered.some((event) => event.recordId === selectedId)) {
@@ -41,9 +56,15 @@ export default function HackAtlasPage() {
   }, [filtered, selectedId])
 
   function resetFilters() {
+    setQueryDraft('')
     setQuery('')
     setFormat(ALL)
     setTopic(ALL)
+  }
+
+  function clearSearch() {
+    setQueryDraft('')
+    setQuery('')
   }
 
   function selectEvent(recordId: string) {
@@ -101,15 +122,37 @@ export default function HackAtlasPage() {
             </div>
 
             <div className="atlas-controls atlas-reveal" data-ui>
-              <label className="atlas-search">
-                <span>Search place, topic, or title</span>
-                <input
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Try climate or Berlin"
-                />
-              </label>
+              <div className="atlas-search">
+                <label htmlFor="event-search">Search place, topic, or title</label>
+                <div className="atlas-search-field">
+                  <input
+                    id="event-search"
+                    type="search"
+                    value={queryDraft}
+                    onChange={(event) => setQueryDraft(event.target.value)}
+                    placeholder="Try climate or Berlin"
+                    aria-describedby="event-search-status"
+                    aria-busy={status === 'loading' || searchPending}
+                    disabled={status !== 'ready'}
+                  />
+                  {queryDraft && status === 'ready' && (
+                    <button type="button" onClick={clearSearch} aria-label="Clear event search">Clear</button>
+                  )}
+                </div>
+                <p
+                  id="event-search-status"
+                  className="atlas-search-status"
+                  data-state={searchFeedback.state}
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  {(searchFeedback.state === 'loading' || searchFeedback.state === 'searching') && (
+                    <span className="atlas-search-spinner" aria-hidden="true" />
+                  )}
+                  {searchFeedback.message}
+                </p>
+              </div>
               <fieldset>
                 <legend>Format</legend>
                 <div className="atlas-choice-row">
@@ -128,8 +171,8 @@ export default function HackAtlasPage() {
                   {topics.map((value) => <option key={value} value={value}>{value}</option>)}
                 </select>
               </label>
-              <p className="atlas-result-count" aria-live="polite">
-                {status === 'ready' ? `${filtered.length} of ${records.length} field notes` : 'Opening the register…'}
+              <p className="atlas-result-count">
+                {status === 'ready' ? `${filtered.length} shown` : 'Register unavailable'}
               </p>
             </div>
 
@@ -137,6 +180,7 @@ export default function HackAtlasPage() {
               <div className="atlas-state" role="alert">
                 <h3>The register did not open.</h3>
                 <p>{error ?? 'The realtime record connection could not be established.'}</p>
+                <button type="button" onClick={() => window.location.reload()}>Retry connection</button>
               </div>
             ) : (
               <div className="atlas-map-detail">

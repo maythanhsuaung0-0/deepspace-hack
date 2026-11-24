@@ -7,6 +7,53 @@ export interface EventFilters {
   topic: string
 }
 
+export type EventSearchState = 'loading' | 'searching' | 'ready' | 'empty' | 'error'
+
+export interface EventSearchFeedback {
+  state: EventSearchState
+  message: string
+}
+
+export function eventSearchFeedback({
+  status,
+  pending,
+  query,
+  resultCount,
+  totalCount,
+}: {
+  status: 'loading' | 'ready' | 'error'
+  pending: boolean
+  query: string
+  resultCount: number
+  totalCount: number
+}): EventSearchFeedback {
+  if (status === 'error') {
+    return { state: 'error', message: 'Search unavailable. Event data could not be loaded.' }
+  }
+  if (status === 'loading') {
+    return { state: 'loading', message: 'Loading events before search…' }
+  }
+  if (pending) {
+    return { state: 'searching', message: 'Searching events…' }
+  }
+  if (totalCount === 0) {
+    return { state: 'empty', message: 'No events are available to search.' }
+  }
+
+  const normalizedQuery = query.trim()
+  if (normalizedQuery) {
+    if (resultCount === 0) {
+      return { state: 'empty', message: `No matches for “${normalizedQuery}”. Try another search.` }
+    }
+    return {
+      state: 'ready',
+      message: `${resultCount} ${resultCount === 1 ? 'match' : 'matches'} for “${normalizedQuery}”.`,
+    }
+  }
+
+  return { state: 'ready', message: `${resultCount} of ${totalCount} field notes.` }
+}
+
 export function filterEvents(
   records: RecordData<HackathonEvent>[],
   filters: EventFilters,
