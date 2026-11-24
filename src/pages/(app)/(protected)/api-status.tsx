@@ -51,7 +51,7 @@ export default function ApiStatusPage() {
             <button
               type="button"
               onClick={catalog.reload}
-              className="w-fit rounded-lg border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="w-fit rounded-lg border border-input bg-background px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               Retry
             </button>
@@ -82,7 +82,7 @@ export default function ApiStatusPage() {
           <button
             type="button"
             onClick={catalog.reload}
-            className="mt-4 rounded-lg border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="mt-4 rounded-lg border border-input bg-background px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             Refresh
           </button>

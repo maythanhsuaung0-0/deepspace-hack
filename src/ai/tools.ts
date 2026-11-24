@@ -12,6 +12,7 @@ import type { ToolSet } from 'ai'
 import { z } from 'zod/v4'
 import { BUILT_IN_TOOLS, applyAiToolDefaults } from 'deepspace/worker'
 import type { ToolSchema, CollectionSchema } from 'deepspace/worker'
+import { DEMO_EVENTS } from '../data/demo-events'
 
 type ToolExecutor = (toolName: string, params: Record<string, unknown>) => Promise<unknown>
 
@@ -93,6 +94,61 @@ export function buildTools(executor: ToolExecutor): ToolSet {
         executor(def.name, applyAiToolDefaults(def.name, params)),
     })
   }
+
+  tools.seed_demo_events = tool({
+    description: 'Create or refresh the fixed HackAtlas synthetic demo events. Owner only and idempotent.',
+    inputSchema: jsonSchema({
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    }),
+    execute: async () => {
+      const current = await executor('records.query', {
+        collection: 'events',
+        orderBy: 'createdAt',
+        orderDir: 'asc',
+        limit: 100,
+      })
+      const result = current as {
+        success?: boolean
+        error?: string
+        data?: { records?: Array<{ recordId?: string }> }
+      }
+      if (!result.success) throw new Error(result.error ?? 'Could not query existing events')
+
+      const existingIds = new Set(
+        (result.data?.records ?? [])
+          .map((record) => record.recordId)
+          .filter((recordId): recordId is string => typeof recordId === 'string'),
+      )
+      let created = 0
+      let updated = 0
+
+      for (const fixture of DEMO_EVENTS) {
+        const operation = existingIds.has(fixture.recordId) ? 'records.update' : 'records.create'
+        const response = await executor(operation, {
+          collection: 'events',
+          recordId: fixture.recordId,
+          data: fixture.data,
+        }) as { success?: boolean; error?: string }
+
+        if (!response.success) {
+          throw new Error(response.error ?? `Could not seed ${fixture.recordId}`)
+        }
+        if (operation === 'records.create') created += 1
+        else updated += 1
+      }
+
+      return {
+        success: true,
+        collection: 'events',
+        created,
+        updated,
+        total: DEMO_EVENTS.length,
+        synthetic: true,
+      }
+    },
+  })
 
   return tools
 }

@@ -49,3 +49,13 @@ reuses the current CLI login and requires no separate connection. If it reports
 headless shell without an action, run `npx deepspace auth login --help` and use
 the operator-supplied credential path it names; never invent credentials or put
 a password on the command line.
+
+## HackAtlas product rules
+
+- Build the public discovery core described in `../.memories/PROJECT.md`; track evidence in `../.memories/PROGRESS.md`.
+- Use the scaffold's React/Vite/Hono structure and native SQLite-backed records. Do not add a parallel Next.js app.
+- The `events` collection is public-read and admin-write. Never rely on hidden UI controls for authorization.
+- Seed only the fixed, visibly synthetic demo fixtures through the owner-only local agent tool. Do not present them as real events.
+- The map and register derive from the same filtered record set.
+- Preserve anonymous browsing and a useful list fallback if map tiles are unavailable.
+- Do not add paid integrations, cron, auth/bookmarks, or real event ingestion unless the user expands scope.

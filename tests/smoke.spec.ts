@@ -1,66 +1,43 @@
 import { test, expect } from '@playwright/test'
 import { captureConsoleErrors } from './helpers/errors'
 
-/**
- * Smoke tests covering both page kinds this template ships:
- *   - '/'      → the static landing (top level of src/pages/): no providers,
- *                so no auth fetch and no records WebSocket on load.
- *   - '/home'  → a dynamic page (under src/pages/(app)/): the providers mount,
- *                the nav shell renders, and the records WebSocket connects.
- *
- * The "static contract" test is the guardrail for the per-page opt-out: if
- * someone moves the providers back up into _app.tsx, it fails.
- */
-
-/** Wait for the React app shell (present on every page). */
 async function waitForApp(page: import('@playwright/test').Page) {
   await page.waitForSelector('[data-testid="app-root"]', { timeout: 15000 })
 }
 
-test.describe('Smoke tests', () => {
-  test('static landing loads without JS errors', async ({ page }) => {
+test.describe('HackAtlas smoke tests', () => {
+  test('public atlas loads without application errors', async ({ page }) => {
     const errors = captureConsoleErrors(page)
     await page.goto('/')
     await waitForApp(page)
-    await expect(page.getByTestId('static-landing')).toBeVisible()
+    await expect(page.getByTestId('hackatlas-page')).toBeVisible({ timeout: 15000 })
+    await expect(page.getByRole('heading', { name: 'One field. Fewer tabs.' })).toBeVisible()
     expect(errors).toEqual([])
   })
 
-  test('landing carries one title, one description, one canonical', async ({ page }) => {
-    // <Seo> (src/pages/index.tsx, values from src/seo.ts) hoists these into
-    // <head>. Exactly one of each: index.html ships no static description or
-    // canonical, because React 19 would not dedupe against them on mount.
+  test('atlas carries one title, description, and canonical', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByTestId('static-landing')).toBeVisible()
-    await expect(page).toHaveTitle(/\S/)
+    await expect(page.getByTestId('hackatlas-page')).toBeVisible({ timeout: 15000 })
+    await expect(page).toHaveTitle(/HackAtlas/)
     expect(await page.locator('head meta[name="description"]').count()).toBe(1)
     expect(await page.locator('head link[rel="canonical"]').count()).toBe(1)
   })
 
-  test('static contract: landing fires no auth request, opens no websocket', async ({ page }) => {
-    const offenders: string[] = []
-    page.on('request', (req) => {
-      if (req.url().includes('/api/auth/')) offenders.push(req.url())
-    })
-    // Only the DO room route counts — vite's own HMR socket is a dev artifact.
-    page.on('websocket', (ws) => {
-      if (new URL(ws.url()).pathname.startsWith('/ws/')) offenders.push(`ws: ${ws.url()}`)
+  test('public route opens the records connection without requiring sign-in', async ({ page }) => {
+    const sockets: string[] = []
+    page.on('websocket', (socket) => {
+      if (new URL(socket.url()).pathname.startsWith('/ws/')) sockets.push(socket.url())
     })
     await page.goto('/')
-    await expect(page.getByTestId('static-landing')).toBeVisible()
-    await page.waitForTimeout(1500)
-    expect(offenders).toEqual([])
+    await expect(page.getByTestId('hackatlas-page')).toBeVisible({ timeout: 15000 })
+    await expect.poll(() => sockets.length, { timeout: 15000 }).toBeGreaterThan(0)
+    await expect(page.getByText(/field notes|Opening the register/).first()).toBeVisible()
   })
 
-  test('dynamic app boundary mounts on /home', async ({ page }) => {
-    await page.goto('/home')
-    await expect(page.getByTestId('app-navigation')).toBeVisible({ timeout: 15000 })
-  })
-
-  test('sign-in button visible when logged out', async ({ page }) => {
-    await page.goto('/home')
-    await expect(page.getByTestId('nav-sign-in-button')).toBeVisible({ timeout: 15000 })
-    await expect(page.getByTestId('nav-user-name')).toHaveCount(0)
+  test('about page explains the synthetic data policy', async ({ page }) => {
+    await page.goto('/about')
+    await expect(page.getByTestId('static-about')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'A truthful atlas starts with its sources.' })).toBeVisible()
   })
 
   test('unknown route shows 404', async ({ page }) => {

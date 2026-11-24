@@ -142,6 +142,7 @@ registerActionRoutes(app, resolveAuth)
 registerAgent(app, {
   tools: buildTools,
   inApp: schemas.some((schema) => schema.name === AI_CHATS_SCHEMA.name),
+  authorize: ({ userId, env }) => userId === env.OWNER_USER_ID,
 })
 registerPlatformProxyRoutes(app)
 registerStaticRoutes(app)

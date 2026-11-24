@@ -22,15 +22,14 @@ import { ToastProvider, TooltipProvider } from '@/components/ui'
 export default function App() {
   return (
     <ToastProvider>
-      {/* The single TooltipProvider: owns the hover delay for every Tooltip
-          and groups them so adjacent triggers switch instantly. Tune delay
-          here — per-Tooltip providers would shadow it (see ui/Tooltip.tsx). */}
+      {/* The single TooltipProvider owns the hover delay for every Tooltip
+          and groups them so adjacent triggers switch instantly. */}
       <TooltipProvider>
         {/* data-testid="app-root" is the canonical "app shell mounted" hook,
             present on every page (static and dynamic). Don't rename without
             updating templates/tests. */}
-        <div data-testid="app-root" className="min-h-screen bg-background text-foreground">
-          <Suspense fallback={<div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>}>
+        <div data-testid="app-root" className="min-h-[100svh] bg-background text-foreground">
+          <Suspense fallback={<div className="flex min-h-[100svh] items-center justify-center text-muted-foreground">Loading...</div>}>
             <Outlet />
           </Suspense>
         </div>
@@ -53,7 +52,7 @@ export function Catch() {
 /** Root fallback shown while Generouted loads the first lazy route module. */
 export function HydrateFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+    <div className="flex min-h-[100svh] items-center justify-center bg-background text-sm text-muted-foreground">
       Loading...
     </div>
   )
